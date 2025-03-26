@@ -1,6 +1,32 @@
 const usersService = require('./users-service');
 const { errorResponder, errorTypes } = require('../../../core/errors');
 const { hashPassword } = require('../../../utils/password');
+const { passwordMatched } = require('../../../utils/password');
+
+async function login(request, response, next) {
+  try {
+    const { email, password } = request.body;
+
+    // Cek apakah user dengan email tersebut ada di database
+    const user = await usersService.getUserByEmail(email);
+    if (!user) {
+      throw errorResponder(errorTypes.UNPROCESSABLE_ENTITY, 'User not found');
+    }
+
+    // Cek apakah password sesuai
+    const isPasswordValid = await passwordMatched(password, user.password);
+    if (!isPasswordValid) {
+      throw errorResponder(errorTypes.INVALID_PASSWORD, 'INVALID_PASSWORD');
+    }
+
+    // Jika email dan password cocok, kirimkan response sukses
+    return response.status(200).json({ message: 'Login successful' });
+  } catch (error) {
+    return next(error);
+  }
+}
+
+module.exports = { login };
 
 async function getUsers(request, response, next) {
   try {
@@ -198,4 +224,5 @@ module.exports = {
   updateUser,
   changePassword,
   deleteUser,
+  login,
 };
